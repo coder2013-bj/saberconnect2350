@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barney's Saber — Quantum Core Terminal</title>
+<style>
+  /* ── Reset & Futuristic Typography ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    --neon-blue: #00f0ff;
+    --neon-purple: #bd00ff;
+    --neon-red: #ff0055;
+    --terminal-bg: rgba(4, 8, 20, 0.85);
+    --border-glow: rgba(0, 240, 255, 0.25);
+  }
+
+  body {
+    min-height: 100vh;
+    background: radial-gradient(circle at center, #0c102b 0%, #02040a 100%);
+    color: #e2edfa;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  /* Animated Grid Backdrop */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+    background-size: 30px 30px;
+    transform: perspective(500px) rotateX(60deg) translateY(-30%) scale(2);
+    opacity: 0.4;
+    z-index: -1;
+    animation: gridMove 20s linear infinite;
+  }
+
+  @keyframes gridMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 600px; }
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 25px;
+    width: 100%;
+    max-width: 650px;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    color: var(--neon-blue);
+    text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+  }
+
+  .status-bar {
+    margin-top: 10px;
+    padding: 8px 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border-glow);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    background: #ff3366;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #ff3366;
+  }
+  .status-dot.ok { background: #00ff66; box-shadow: 0 0 8px #00ff66; }
+
+  /* ── Interactive Elements ── */
+  button.action-btn {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(189, 0, 255, 0.2));
+    border: 1px solid var(--neon-blue);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+  }
+
+  button.action-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.4), rgba(189, 0, 255, 0.4));
+  }
+
+  .panel {
+    width: 100%;
+    max-width: 650px;
+    background: var(--terminal-bg);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,240,255,0.05);
+    backdrop-filter: blur(10px);
+    display: none;
+  }
+
+  .panel.active { display: block; }
+
+  .section-title {
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--neon-purple);
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(189, 0, 255, 0.2);
+    padding-bottom: 5px;
+  }
+
+  .grid-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 25px;
+  }
+
+  .ctrl-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .power-toggle {
+    width: 100%;
+    height: 100%;
+    min-height: 80px;
+    font-size: 1.1rem;
+  }
+  .power-toggle.on {
+    border-color: #00ff66;
+    box-shadow: 0 0 20px rgba(0, 255, 102, 0.3);
+    background: rgba(0, 255, 102, 0.1);
+  }
+
+  .color-wrapper {
+    display: flex;
+    gap: 15px;
+    width: 100%;
+  }
+
+  .color-box {
+    flex: 1;
+    text-align: center;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+  }
+
+  .color-box input[type="color"] {
+    -webkit-appearance: none;
+    border: none;
+    width: 100%;
+    height: 45px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    margin-top: 5px;
+  }
+
+  /* Sliders config matching your Python constraints */
+  .sliders-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 25px;
+  }
+
+  .slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #a4b8cc;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--neon-blue);
+    box-shadow: 0 0 8px var(--neon-blue);
+    cursor: pointer;
+  }
+
+  /* Matrix Layout for 24 effects */
+  .matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+  }
+
+  .matrix-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #b5c7d9;
+    padding: 10px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+    text-transform: capitalize;
+  }
+
+  .matrix-btn:hover {
+    border-color: rgba(0, 240, 255, 0.5);
+    background: rgba(0, 240, 255, 0.08);
+    color: #fff;
+  }
+
+  .matrix-btn.active {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(189, 0, 255, 0.2));
+    border-color: var(--neon-blue);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+    font-weight: bold;
+  }
+  
+  .clash-btn {
+    grid-column: 1 / -1;
+    border-color: var(--neon-red) !important;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .clash-btn:hover {
+    background: rgba(255, 0, 85, 0.15) !important;
+  }
+
+  #consoleLog {
+    width: 100%;
+    max-width: 650px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 20px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #798e9c;
+    max-height: 100px;
+    overflow-y: auto;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Saber Quantum Core</h1>
+  <div class="status-bar">
+    <div id="statusDot" class="status-dot"></div>
+    <span id="statusTxt">Terminal Offline</span>
+  </div>
+</header>
+
+<button id="connectBtn" class="action-btn" style="margin-bottom: 20px;">Initialize Core Link</button>
+
+<div id="controls" class="panel">
+  <div class="grid-top">
+    <div class="ctrl-card" style="grid-column: span 1;">
+      <button id="powerBtn" class="action-btn power-toggle">Engage Blade</button>
+    </div>
+    <div class="ctrl-card" style="grid-column: span 1;">
+      <div class="color-wrapper">
+        <div class="color-box">
+          <label>Primary</label>
+          <input type="color" id="cPick1" value="#0078ff">
+        </div>
+        <div class="color-box">
+          <label>Secondary</label>
+          <input type="color" id="cPick2" value="#ff0000">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Core Tuning Parameters</div>
+  <div class="sliders-group">
+    <div class="slider-row">
+      <div class="slider-label"><span>Master Brightness</span><span id="vBright">100%</span></div>
+      <input type="range" id="slBright" min="5" max="100" value="100">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label"><span>Flicker Amplitude</span><span id="vFlickAmp">7%</span></div>
+      <input type="range" id="slFlickAmp" min="0" max="30" value="7">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label"><span>Flicker Speed Rate</span><span id="vFlickSpd">35</span></div>
+      <input type="range" id="slFlickSpd" min="1" max="100" value="35">
+    </div>
+    <div class="slider-row">
+      <div class="slider-label"><span>Kyber Core Volatility (White Core)</span><span id="vWhite">42%</span></div>
+      <input type="range" id="slWhite" min="0" max="100" value="42">
+    </div>
+  </div>
+
+  <div class="section-title">Matrix Light Crystals (24 Effects)</div>
+  <div class="matrix-grid" id="matrixGrid">
+    </div>
+</div>
+
+<div id="consoleLog">Terminal initialized. Awaiting hardware hook...</div>
+
+<script>
+/* ── Configuration array mirroring your exact VALID_ANIMS python block ── */
+const ANIMATIONS = [
+  'plasma', 'solid', 'dual', 'rainbow', 'fire', 'unstable', 'flash',
+  'lightning', 'pulse', 'sparkle', 'tracker', 'emitter_bleed',
+  'compression', 'glitch', 'singularity', 'phaser', 'bio_mesh',
+  'cyber_sweep', 'comet', 'heartbeat', 'matrix_rain', 'galaxy', 'vortex'
+];
+
+/* BLE Characteristic Endpoints */
+const SVC_UUID = '7a0247b0-0001-4adf-a9f0-8d3b1c6e9f00';
+const CHARS = {
+  power:  '7a0247b0-0002-4adf-a9f0-8d3b1c6e9f00',
+  color:  '7a0247b0-0003-4adf-a9f0-8d3b1c6e9f00',
+  color2: '7a0247b0-0004-4adf-a9f0-8d3b1c6e9f00',
+  anim:   '7a0247b0-0005-4adf-a9f0-8d3b1c6e9f00',
+  params: '7a0247b0-0006-4adf-a9f0-8d3b1c6e9f00'
+};
+
+let device, server, service;
+let activeCharacteristics = {};
+let bladeOn = false;
+
+// Populate matrix grid dynamically
+const gridElement = document.getElementById('matrixGrid');
+ANIMATIONS.forEach(anim => {
+  const b = document.createElement('button');
+  b.className = 'matrix-btn';
+  b.textContent = anim.replace('_', ' ');
+  b.dataset.anim = anim;
+  b.onclick = () => transmitAnimation(anim);
+  gridElement.appendChild(b);
+});
+
+// Add the structural Clash button at the bottom
+const clashBtn = document.createElement('button');
+clashBtn.className = 'matrix-btn clash-btn';
+clashBtn.textContent = '⚡ TRIGGER BLAST CLASH ⚡';
+clashBtn.onclick = () => transmitAnimation('clash');
+gridElement.appendChild(clashBtn);
+
+function log(msg) {
+  const el = document.getElementById('consoleLog');
+  el.textContent += `\n[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function setConnState(text, indicator) {
+  const txt = document.getElementById('statusTxt');
+  const dot = document.getElementById('statusDot');
+  txt.textContent = text;
+  dot.className = `status-dot ${indicator}`;
+}
+
+/* ── Web Bluetooth Data Stream Hooks ── */
+document.getElementById('connectBtn').onclick = async () => {
+  try {
+    document.getElementById('connectBtn').disabled = true;
+    setConnState('Scanning for Kyber Core...', '');
+    
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ name: 'BarneysSaber' }],
+      optionalServices: [SVC_UUID]
+    });
+    
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+    log('Found core. Establishing proxy channel...');
+    
+    server = await device.gatt.connect();
+    service = await server.getPrimaryService(SVC_UUID);
+    
+    // Bind all handles
+    for (const [key, uuid] of Object.entries(CHARS)) {
+      activeCharacteristics[key] = await service.getCharacteristic(uuid);
+    }
+
+    // Capture initial hardware values
+    await readInitialState();
+
+    document.getElementById('controls').classList.add('active');
+    setConnState('Core Linked — Online', 'ok');
+    document.getElementById('connectBtn').textContent = 'Reconnect Sync';
+    document.getElementById('connectBtn').disabled = false;
+    log('Quantum sync pipeline fully active.');
+  } catch(e) {
+    setConnState('Link Rejected', 'err');
+    document.getElementById('connectBtn').disabled = false;
+    log(e.message);
+  }
+};
+
+async function readInitialState() {
+  // Power state
+  const pVal = await activeCharacteristics.power.readValue();
+  bladeOn = pVal.getUint8(0) === 1;
+  updatePowerUI();
+
+  // Primary Color
+  const c1Val = await activeCharacteristics.color.readValue();
+  document.getElementById('cPick1').value = rgbToHex(c1Val.getUint8(0), c1Val.getUint8(1), c1Val.getUint8(2));
+  
+  // Secondary Color
+  const c2Val = await activeCharacteristics.color2.readValue();
+  document.getElementById('cPick2').value = rgbToHex(c2Val.getUint8(0), c2Val.getUint8(1), c2Val.getUint8(2));
+
+  // Tuning Parameters vector [Brightness, FlickerAmp, FlickerSpd, WhiteCore]
+  const prmVal = await activeCharacteristics.params.readValue();
+  document.getElementById('slBright').value = prmVal.getUint8(0);
+  document.getElementById('slFlickAmp').value = prmVal.getUint8(1);
+  document.getElementById('slFlickSpd').value = prmVal.getUint8(2);
+  document.getElementById('slWhite').value = prmVal.getUint8(3);
+  syncSliderLabels();
+
+  // Active effect string
+  const aVal = await activeCharacteristics.anim.readValue();
+  highlightActiveAnim(new TextDecoder().decode(aVal).trim());
+}
+
+function updatePowerUI() {
+  const btn = document.getElementById('powerBtn');
+  btn.textContent = bladeOn ? 'Extinguish Blade' : 'Engage Blade';
+  btn.classList.toggle('on', bladeOn);
+}
+
+document.getElementById('powerBtn').onclick = async () => {
+  bladeOn = !bladeOn;
+  updatePowerUI();
+  try {
+    await activeCharacteristics.power.writeValue(new Uint8Array([bladeOn ? 1 : 0]));
+    log(`Blade power flag written: ${bladeOn}`);
+  } catch(e) { log('Power send fail: ' + e.message); }
+};
+
+// Color handlers
+const hexToRgb = hex => hex.match(/\w\2/g).map(x => parseInt(x, 16));
+const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+
+async function transmitColor(targetKey, hexStr) {
+  const r = parseInt(hexStr.slice(1,3), 16);
+  const g = parseInt(hexStr.slice(3,5), 16);
+  const b = parseInt(hexStr.slice(5,7), 16);
+  try {
+    await activeCharacteristics[targetKey].writeValue(new Uint8Array([r, g, b]));
+    log(`Color register [${targetKey}] vector adjusted: ${r}, ${g}, ${b}`);
+  } catch(e) { log('Color broadcast dropped: ' + e.message); }
+}
+
+document.getElementById('cPick1').oninput = (e) => transmitColor('color', e.target.value);
+document.getElementById('cPick2').oninput = (e) => transmitColor('color2', e.target.value);
+
+// Sliders mapping
+function syncSliderLabels() {
+  document.getElementById('vBright').textContent = document.getElementById('slBright').value + '%';
+  document.getElementById('vFlickAmp').textContent = document.getElementById('slFlickAmp').value + '%';
+  document.getElementById('vFlickSpd').textContent = document.getElementById('slFlickSpd').value;
+  document.getElementById('vWhite').textContent = document.getElementById('slWhite').value + '%';
+}
+
+async function transmitParameters() {
+  syncSliderLabels();
+  const b = parseInt(document.getElementById('slBright').value);
+  const fa = parseInt(document.getElementById('slFlickAmp').value);
+  const fs = parseInt(document.getElementById('slFlickSpd').value);
+  const w = parseInt(document.getElementById('slWhite').value);
+  try {
+    await activeCharacteristics.params.writeValue(new Uint8Array([b, fa, fs, w]));
+  } catch(e) { log('Parameter stream choke: ' + e.message); }
+}
+
+['slBright', 'slFlickAmp', 'slFlickSpd', 'slWhite'].forEach(id => {
+  document.getElementById(id).oninput = transmitParameters;
+});
+
+// Animations management
+async function transmitAnimation(animName) {
+  try {
+    await activeCharacteristics.anim.writeValue(new TextEncoder().encode(animName));
+    highlightActiveAnim(animName);
+    log(`Matrix command dispatched: -> [${animName}]`);
+  } catch(e) { log('Matrix routing error: ' + e.message); }
+}
+
+function highlightActiveAnim(activeName) {
+  document.querySelectorAll('.matrix-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.anim === activeName);
+  });
+}
+
+function onDisconnected() {
+  document.getElementById('controls').classList.remove('active');
+  setConnState('Telemetry Link Severed', 'err');
+  document.getElementById('connectBtn').textContent = 'Initialize Core Link';
+  document.getElementById('connectBtn').disabled = false;
+  log('Warning: Peripheral disconnected from central device.');
+}
+</script>
+</body>
+</html>
